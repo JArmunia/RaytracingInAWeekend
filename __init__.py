@@ -7,87 +7,66 @@ from hitable_list import hitable_list
 from camera import Camera
 from random import random, seed
 from time import time_ns
+import material
 import sys
-
-
-# def color(r: ray) -> np.ndarray:
-#     t = hit_sphere(np.array((0, 0, -1), float), 0.5, r)
-#     if t > 0:
-#         N = r.point_at_parameter(t) - np.array((0, 0, -1))
-#         N = N / np.linalg.norm(N)
-#         return 0.5 * (N + 1)
-#     direction = r.direction()
-#     unit_direction = direction / np.linalg.norm(direction)
-#     t = 0.5 * (unit_direction[1] + 1)
-#     return (1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1), float)
-
-
-# def color(r: ray, world: Hitable):
-#     has_hit, rec = world.hit(r, 0.001, np.inf)
-#
-#     if has_hit:
-#         target = rec.p + rec.normal + random_in_unit_sphere()
-#         # TODO hacer iterativo
-#         return 0.5 * color(ray.Ray(rec.p, target - rec.p), world)
-#     else:
-#
-#         direction = r.direction()
-#         unit_direction = direction / np.linalg.norm(direction)
-#         t = 0.5 * (unit_direction[1] + 1)
-#         return (1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1), float)
 
 
 def color(r: Ray, world: Hitable):
     has_hit, rec = world.hit(r, 0.001, np.inf)
-    count = 0
+    depth = 0
+    attenuation = 1
     while has_hit:
-        target = rec.p + rec.normal + random_in_unit_sphere()
-        r = Ray(rec.p, target - rec.p)
-        has_hit, rec = world.hit(r, 0.001, np.inf)
-        count += 1
+
+        has_scattered, attenuation, scattered = rec.material.scatter(r, rec)
+        if (depth < 50) and has_scattered:
+            has_hit, rec = world.hit(scattered, 0.001, np.inf)
+        else:
+            return np.array((0, 0, 0))
+
+        depth += 1
 
     direction = r.direction()
     unit_direction = direction / np.linalg.norm(direction)
     t = 0.5 * (unit_direction[1] + 1)
-    return pow(0.5, count) * ((1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1), float))
+    return np.power(attenuation, depth) * ((1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1), float))
 
 
-# def hit_sphere(center: np.ndarray, radius: float, r: ray) -> float:
-#     oc = r.origin() - center
-#     a = np.dot(r.direction(), r.direction())
-#     b = 2 * np.dot(oc, r.direction())
-#     c = np.dot(oc, oc) - radius * radius
-#     discriminant = b * b - 4 * a * c
-#     if discriminant < 0:
-#         return -1
-#     else:
-#         return (-b - math.sqrt(discriminant)) / (2 * a)
+def color(r: Ray, world: Hitable, depth: int):
+    has_hit, rec = world.hit(r, 0.001, np.inf)
+    if has_hit:
+        has_scattered, attenuation, scattered = rec.material.scatter(r, rec)
+        if (depth < 50) and has_scattered:
+            return attenuation * color(scattered, world, depth + 1)
+        else:
+            return np.array((0, 0, 0), float)
 
-def random_in_unit_sphere():
-    norm = 2
-    while (norm * norm) >= 1:
-        p = 2.0 * np.array((random(), random(), random())) - np.array((1, 1, 1))
-        norm = np.linalg.norm(p)
-    return p
+    else:
+        direction = r.direction()
+        unit_direction = direction / np.linalg.norm(direction)
+        t = 0.5 * (unit_direction[1] + 1)
+        return (1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1.0))
 
 
 if __name__ == '__main__':
 
     # sys.setrecursionlimit(99999)
-
-    f = open("pr.ppm", "w+")
-    nx: int = 400
+    args = sys.argv
+    f = open(args[1], "w+")
+    nx: int = 200
     ny: int = 100
-    ns: int = 100
+    ns: int = 20
 
     f.write("P3\n{} {}\n255".format(nx, ny))
 
     cam = Camera()
     h_list = list()
-    h_list.append(Sphere(np.array((0, 0, -1)), 0.5))
-    h_list.append(Sphere(np.array((0, -100.5, -1)), 100))
-    h_list.append(Sphere(np.array((10, 2, -10)), 2))
+    h_list.append(Sphere(np.array((0, 0, -1)), 0.5, material.lambertian(np.array((0.1, 0.2, 0.5)))))
+    h_list.append(Sphere(np.array((0, -100.5, -1)), 100, material.lambertian(np.array((0.8, 0.8, 0)))))
+    h_list.append(Sphere(np.array((1, 0, -1)), 0.5, material.metal(np.array((0.8, 0.6, 0.2)), 0.3)))
+    h_list.append(Sphere(np.array((-1, 0, -1)), 0.5, material.dielectric(1.5)))
+    h_list.append(Sphere(np.array((-5, 2.5, -5)), 2, material.lambertian(np.array((0.1, 0.2, 0.5)))))
     world: Hitable = hitable_list(h_list)
+
     seed(time_ns())
     t_init = time_ns()
     for j in range(ny, 0, -1):
@@ -98,7 +77,7 @@ if __name__ == '__main__':
                 v = (j + random()) / ny
                 r = cam.get_ray(u, v)
                 p = r.point_at_parameter(2)
-                col += color(r, world)
+                col += color(r, world, 0)
 
             col = np.sqrt(col / ns) * 255.99
             ir = int(col[0])
@@ -106,6 +85,7 @@ if __name__ == '__main__':
             ib = int(col[2])
 
             f.write("\n{} {} {}".format(ir, ig, ib))
+        print("{}% ({}/{})".format(100 * (ny - j) / ny, ny - j, ny))
 
     t_end = time_ns()
     total = t_end - t_init

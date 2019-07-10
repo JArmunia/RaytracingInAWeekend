@@ -1,14 +1,15 @@
 import numpy as np
 from ray import Ray
 from math import sqrt
-
+import material
 from hitable import hit_record, Hitable
 
 
 class Sphere(Hitable):
-    def __init__(self, center: np.ndarray, radius: float):
+    def __init__(self, center: np.ndarray, radius: float, m: material.material):
         self.center = center
         self.radius = radius
+        self.material = m
 
     def hit(self, r: Ray, t_min: float, t_max: float):
         oc = r.origin() - self.center
@@ -23,7 +24,7 @@ class Sphere(Hitable):
                 t = temp
                 p = r.point_at_parameter(t)
                 normal = (p - self.center) / self.radius
-                rec = hit_record(t, p, normal, None)
+                rec = hit_record(t, p, normal, self.material)
                 return True, rec
 
             temp = (-b + sqrt(b * b - a * c)) / a
@@ -31,7 +32,7 @@ class Sphere(Hitable):
                 t = temp
                 p = r.point_at_parameter(t)
                 normal = (p - self.center) / self.radius
-                rec = hit_record(t, p, normal, None)
+                rec = hit_record(t, p, normal, self.material)
                 return True, rec
 
         return False, None

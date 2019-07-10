@@ -9,6 +9,9 @@ class hit_record:
         self.normal = normal
         self.material = material
 
+    def __str__(self):
+        return "t: {} p: {} normal: {} material{}".format(self.t, self.p, self.normal, self.material)
+
 
 class Hitable:
     def hit(self, r: Ray, t_min: float, t_max: float):
