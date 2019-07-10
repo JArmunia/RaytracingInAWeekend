@@ -6,6 +6,7 @@ from time import time_ns
 from math import sqrt, pow
 
 
+
 def random_in_unit_sphere():
     norm = 2
     seed(time_ns())
@@ -33,7 +34,7 @@ class lambertian(material):
 
 
 def reflect(v: np.ndarray, n: np.ndarray):
-    return v - 2 * np.dot(v, n) * n;
+    return v - 2 * np.dot(v, n) * n
 
 
 class metal(material):
