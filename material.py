@@ -1,10 +1,11 @@
-from ray import Ray
-from hitable import hit_record
-import numpy as np
 from random import random, seed
 from time import time_ns
+
+import numpy as np
 from math import sqrt, pow
 
+from hitable import hit_record
+from ray import Ray
 
 
 def random_in_unit_sphere():

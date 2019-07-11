@@ -1,15 +1,18 @@
-import numpy as np
-from ray import Ray
-from math import pow
-from hitable import Hitable, hit_record
-from sphere import Sphere
-from hitable_list import hitable_list
-from camera import Camera
-from random import random, seed
-from time import time_ns
-import material
 import sys
 from multiprocessing import Pool, cpu_count
+from random import random, seed
+from time import time_ns
+
+import numpy as np
+
+import material
+from camera import Camera
+from hitable import Hitable
+from hitable_list import hitable_list
+from ray import Ray
+from sphere import Sphere
+
+"""Iterative implementation of color function"""
 
 
 def color(r: Ray, world: Hitable):
@@ -56,7 +59,11 @@ def color(r: Ray, world: Hitable):
 #     return np.power(attenuation, depth) * ((1 - t) * np.array((1, 1, 1), float) + t * np.array((0.5, 0.7, 1), float))
 #
 #
-# def color(r: Ray, world: Hitable, depth: int):
+
+""" Recursive implementation of color function """
+
+
+# def color(r: Ray, world: Hitable, depth: int = 0):
 #     has_hit, rec = world.hit(r, 0.001, np.inf)
 #     if has_hit:
 #         has_scattered, attenuation, scattered = rec.material.scatter(r, rec)
@@ -64,7 +71,6 @@ def color(r: Ray, world: Hitable):
 #             return attenuation * color(scattered, world, depth + 1)
 #         else:
 #             return np.array((0, 0, 0), float)
-#
 #     else:
 #         direction = r.direction()
 #         unit_direction = direction / np.linalg.norm(direction)
@@ -108,7 +114,7 @@ def render(ny: float, nx: float, start: int, end: int, world, cam, img: dict):
                 v = (j + random()) / ny
                 r = cam.get_ray(u, v)
                 p = r.point_at_parameter(2)
-                col += color(r, world)
+                col += color(r, world, 0)
 
             col = np.sqrt(col / ns) * 255.99
             ir = int(col[0])
@@ -129,10 +135,10 @@ if __name__ == '__main__':
 
     f.write("P3\n{} {}\n255".format(nx, ny))
 
-    lookfrom: np.ndarray = np.array((3, 3, 2))
+    lookfrom: np.ndarray = np.array((3, 0, 2))
     lookat: np.ndarray = np.array((0, 0, -1))
     dist_to_focus = np.linalg.norm(lookfrom - lookat)
-    aperture = 2.0
+    aperture = 2
     # cam = Camera(np.array((0, 0, 0)), np.array((0, 0, -1)), np.array((0, 1, 0)), 90, nx / ny)
     cam = Camera(lookfrom, lookat, np.array((0, 1, 0)), 20, float(nx) / float(ny), aperture, dist_to_focus)
     R = np.cos(np.pi / 4)
@@ -142,12 +148,12 @@ if __name__ == '__main__':
     # h_list.append(Sphere(np.array((R, 0, -1)), R, material.lambertian(np.array((1., 0., 0.)))))
     h_list.append(Sphere(np.array((0, 0, -1)), 0.5, material.lambertian(np.array((0.1, 0.2, 0.5)))))
     h_list.append(Sphere(np.array((0, -100.5, -1)), 100, material.lambertian(np.array((0.8, 0.8, 0)))))
-    h_list.append(Sphere(np.array((1, 0, -1)), 0.5, material.metal(np.array((0.8, 0.6, 0.2)), 0.3)))
+    h_list.append(Sphere(np.array((1, 0, -1)), 0.5, material.metal(np.array((0.8, 0.6, 0.8)), 0.3)))
     h_list.append(Sphere(np.array((-1, 0, -1)), 0.5, material.dielectric(1.5)))
     # h_list.append(Sphere(np.array((-1, 0, -1)), -0.45, material.dielectric(1.5)))
-    h_list.append(Sphere(np.array((-5, 2.5, -5)), 2, material.lambertian(np.array((0.1, 0.2, 0.5)))))
-    world: Hitable = hitable_list(random_scene())
-    img = dict()
+    # h_list.append(Sphere(np.array((-5, 2.5, -5)), 2, material.lambertian(np.array((0.1, 0.2, 0.5)))))
+    world: Hitable = hitable_list(h_list)
+
     seed(time_ns())
     t_init = time_ns()
     for j in range(ny, 0, -1):

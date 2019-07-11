@@ -1,8 +1,9 @@
 import numpy as np
-from ray import Ray
 from math import sqrt
+
 import material
 from hitable import hit_record, Hitable
+from ray import Ray
 
 
 class Sphere(Hitable):
@@ -14,9 +15,9 @@ class Sphere(Hitable):
     def hit(self, r: Ray, t_min: float, t_max: float):
         oc = r.origin() - self.center
         a = np.dot(r.direction(), r.direction())
-        b =  np.dot(oc, r.direction())
+        b = np.dot(oc, r.direction())
         c = np.dot(oc, oc) - self.radius * self.radius
-        discriminant = b * b -  a * c
+        discriminant = b * b - a * c
 
         if discriminant > 0:
             temp = (-b - sqrt(b * b - a * c)) / a
@@ -36,4 +37,3 @@ class Sphere(Hitable):
                 return True, rec
 
         return False, None
-
